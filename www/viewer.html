@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html>
-
-<head>
+  <head>
     <title>Autodesk Forge: 3D Viewer App Sample</title>
 
     <meta http-equiv="cache-control" content="max-age=0" />
@@ -12,106 +11,41 @@
     <!-- Third Party package -->
     <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
     <!-- Autodesk Forge Viewer files (IMPORTANT) -->
-    <link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/6.*/style.min.css" type="text/css">
+    <link
+      rel="stylesheet"
+      href="https://developer.api.autodesk.com/modelderivative/v2/viewers/6.*/style.min.css"
+      type="text/css"
+    />
     <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/6.*/viewer3D.min.js"></script>
-    <style>
-        /** Just simple CSS styling to make this page a little nicer **/
-        body {
-            margin: 0;
-            padding: 0;
-        }
-    </style>
-</head>
+    <script src="./js/Extensions/quantities_extension.js"></script>
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+      integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
 
-<body>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+      <a class="navbar-brand" href="/">
+        <img src="./img/Logo SD Medium.png" class="w-25" alt="" />
+      </a>
+    </nav>
     <!-- The Viewer will be instantiated here -->
-    <div id="MyViewerDiv"></div>
+    <main>
+      <div class="row mx-0 h-100">
+        <div class="col-7 px-0">
+          <div id="MyViewerDiv"></div>
+        </div>
+        <div class="col-5 px-0">
+          <ul id="quantities" class="list-group"></ul>
+        </div>
+      </div>
+    </main>
     <!-- Custom script -->
-    <script>
-        var viewerApp;
-        var options = {
-            env: 'AutodeskProduction',
-            api: 'derivativeV2', // TODO: for models uploaded to EMEA change this option to 'derivativeV2_EU'
-            getAccessToken: getForgeToken
-        };
-        var documentId = 'urn:' + getUrlParameter('urn');
-
-        // Run this when the page is loaded
-        Autodesk.Viewing.Initializer(options, function onInitialized(){
-            viewerApp = new Autodesk.Viewing.ViewingApplication('MyViewerDiv');
-            viewerApp.registerViewer(viewerApp.k3D, Autodesk.Viewing.Private.GuiViewer3D);
-            viewerApp.loadDocument(documentId, onDocumentLoadSuccess, onDocumentLoadFailure);
-        });
-
-        /**
-        * Autodesk.Viewing.Document.load() success callback.
-        * Proceeds with model initialization.
-        */
-        function onDocumentLoadSuccess(doc) {
-            // We could still make use of Document.getSubItemsWithProperties()
-            // However, when using a ViewingApplication, we have access to the **bubble** attribute,
-            // which references the root node of a graph that wraps each object from the Manifest JSON.
-            var viewables = viewerApp.bubble.search({'type':'geometry'});
-            if (viewables.length === 0) {
-                console.error('Document contains no viewables.');
-                return;
-            }
-
-            // Choose any of the avialble viewables
-            viewerApp.selectItem(viewables[0].data, onItemLoadSuccess, onItemLoadFail);
-        }
-
-        // Get Query string from URL,
-        // we will use this to get the value of 'urn' from URL
-        function getUrlParameter(name) {
-            name = name.replace(/[[]/, '\\[').replace(/[\]]/, '\\]');
-            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
-            var results = regex.exec(location.search);
-            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
-        }
-
-        // Get public access token for read only,
-        // using ajax to access route /api/forge/oauth/public in the background
-        function getForgeToken(callback) {
-            jQuery.ajax({
-                url: '/api/forge/oauth/public',
-                success: function (res) {
-                    callback(res.access_token, res.expires_in);
-                }
-            });
-        }
-        
-        /**
-        * viewerApp.loadDocument() failuire callback.
-        */
-        function onDocumentLoadFailure(viewerErrorCode) {
-            console.error('onDocumentLoadFailure() - errorCode:' + viewerErrorCode);
-            jQuery('#MyViewerDiv').html('<p>Translation in progress... Please try refreshing the page.</p>');
-        }
-
-        /**
-        * viewerApp.selectItem() success callback.
-        * Invoked after the model's SVF has been initially loaded.
-        * It may trigger before any geometry has been downloaded and displayed on-screen.
-        */
-        function onItemLoadSuccess(viewer, item) {
-            console.log('onItemLoadSuccess()!');
-            console.log(viewer);
-            console.log(item);
-
-            // Congratulations! The viewer is now ready to be used.
-            console.log('Viewers are equal: ' + (viewer === viewerApp.getCurrentViewer()));
-        }
-
-        /**
-        * viewerApp.selectItem() failure callback.
-        * Invoked when there's an error fetching the SVF file.
-        */
-        function onItemLoadFail(viewerErrorCode) {
-            console.error('onLoadModelError() - errorCode:' + viewerErrorCode);
-            jQuery('#MyViewerDiv').html('<p>There is an error fetching the translated SVF file. Please try refreshing the page.</p>');
-        }
-  </script>
-</body>
-
+    <script src="./js/viewer-scripts.js"></script>
+  </body>
 </html>
