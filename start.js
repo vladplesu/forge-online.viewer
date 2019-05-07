@@ -203,6 +203,12 @@ app.post(
                     // Success
                     console.log(response);
                     var urn = response.data.objectId.toBase64();
+                    if (req.body.loadNewModel) {
+                        // console.log(
+                        //     'This is the request: ' + req.body.loadNewModel
+                        // );
+                        res.redirect('/api/forge/modelderivative/new/' + urn);
+                    }
                     res.redirect('/api/forge/modelderivative/' + urn);
                 })
                 .catch(function(error) {
@@ -245,6 +251,45 @@ app.get('/api/forge/modelderivative/:urn', function(req, res) {
             // Success
             console.log(response);
             res.redirect('/viewer.html?urn=' + urn);
+        })
+        .catch(function(error) {
+            // Failed
+            console.log(error);
+            res.send('Error at Model Derivative job.');
+        });
+});
+
+// Route /api/forge/modelderivative
+app.get('/api/forge/modelderivative/new/:urn', function(req, res) {
+    var urn = req.params.urn;
+    var format_type = 'svf';
+    var format_views = ['2d', '3d'];
+    Axios({
+        method: 'POST',
+        url:
+            'https://developer.api.autodesk.com/modelderivative/v2/designdata/job',
+        headers: {
+            'content-type': 'application/json',
+            Authorization: 'Bearer ' + access_token
+        },
+        data: JSON.stringify({
+            input: {
+                urn: urn
+            },
+            output: {
+                formats: [
+                    {
+                        type: format_type,
+                        views: format_views
+                    }
+                ]
+            }
+        })
+    })
+        .then(function(response) {
+            // Success
+            console.log(response);
+            res.json({ urn });
         })
         .catch(function(error) {
             // Failed

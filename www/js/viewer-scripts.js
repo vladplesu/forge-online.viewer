@@ -1,4 +1,4 @@
-var viewerApp;
+var viewer;
 var options = {
     env: 'AutodeskProduction',
     api: 'derivativeV2', // TODO: for models uploaded to EMEA change this option to 'derivativeV2_EU'
@@ -8,16 +8,7 @@ var documentId = 'urn:' + getUrlParameter('urn');
 
 // Run this when the page is loaded
 Autodesk.Viewing.Initializer(options, function onInitialized() {
-    viewerApp = new Autodesk.Viewing.ViewingApplication('MyViewerDiv');
-    const config3d = {
-        extensions: ['QuantitiesExtension']
-    };
-    viewerApp.registerViewer(
-        viewerApp.k3D,
-        Autodesk.Viewing.Private.GuiViewer3D,
-        config3d
-    );
-    viewerApp.loadDocument(
+    Autodesk.Viewing.Document.load(
         documentId,
         onDocumentLoadSuccess,
         onDocumentLoadFailure
@@ -32,14 +23,32 @@ function onDocumentLoadSuccess(doc) {
     // We could still make use of Document.getSubItemsWithProperties()
     // However, when using a ViewingApplication, we have access to the **bubble** attribute,
     // which references the root node of a graph that wraps each object from the Manifest JSON.
-    var viewables = viewerApp.bubble.search({ type: 'geometry' });
+    const viewables = Autodesk.Viewing.Document.getSubItemsWithProperties(
+        doc.getRootItem(),
+        { type: 'geometry' },
+        true
+    );
     if (viewables.length === 0) {
         console.error('Document contains no viewables.');
         return;
     }
 
     // Choose any of the avialble viewables
-    viewerApp.selectItem(viewables[0].data, onItemLoadSuccess, onItemLoadFail);
+    const initViewable = viewables[0];
+    const svfUrl = doc.getViewablePath(initViewable);
+    const mat = new THREE.Matrix4();
+    const modelOptions = {
+        placementTransform: mat,
+        globalOffset: { x: 0, y: 0, z: 0 },
+        sharedPropertyDbPath: doc.getPropertyDbPath()
+    };
+
+    const viewerDiv = document.getElementById('MyViewerDiv');
+    const config = {
+        extensions: ['NewModelExtension', 'QuantitiesExtension']
+    };
+    viewer = new Autodesk.Viewing.Private.GuiViewer3D(viewerDiv, config);
+    viewer.start(svfUrl, modelOptions, onLoadModelSuccess, onLoadModelError);
 }
 
 // Get Query string from URL,
@@ -79,24 +88,15 @@ function onDocumentLoadFailure(viewerErrorCode) {
  * Invoked after the model's SVF has been initially loaded.
  * It may trigger before any geometry has been downloaded and displayed on-screen.
  */
-function onItemLoadSuccess(viewer, item) {
-    console.log('onItemLoadSuccess()!');
-    // console.log(viewer);
-    // console.log(item);
-
-    // Congratulations! The viewer is now ready to be used.
-    // console.log(
-    //     'Viewers are equal: ' + (viewer === viewerApp.getCurrentViewer())
-    // );
+function onLoadModelSuccess(model) {
+    console.log('onLoadModelSuccess()!');
+    console.log(model);
 }
 
 /**
  * viewerApp.selectItem() failure callback.
  * Invoked when there's an error fetching the SVF file.
  */
-function onItemLoadFail(viewerErrorCode) {
+function onLoadModelError(viewerErrorCode) {
     console.error('onLoadModelError() - errorCode:' + viewerErrorCode);
-    jQuery('#MyViewerDiv').html(
-        '<p>There is an error fetching the translated SVF file. Please try refreshing the page.</p>'
-    );
 }

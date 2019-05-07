@@ -17,7 +17,9 @@
       type="text/css"
     />
     <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/6.*/viewer3D.min.js"></script>
+    <script src="./js/three.js"></script>
     <script src="./js/Extensions/quantities_extension.js"></script>
+    <script src="./js/Extensions/new_model_extension.js"></script>
     <!-- Bootstrap CSS -->
     <link
       rel="stylesheet"
@@ -33,6 +35,32 @@
       <a class="navbar-brand" href="/">
         <img src="./img/Logo SD Medium.png" class="w-25" alt="" />
       </a>
+      <form
+        enctype="multipart/form-data"
+        method="post"
+        class="needs-validation"
+        novalidate
+      >
+        <div class="input-group">
+          <div class="custom-file">
+            <input
+              type="file"
+              name="fileToUpload"
+              class="custom-file-input"
+              id="inputGroup"
+              accept=".ifc"
+            />
+            <label for="inputGroup" class="custom-file-label"
+              >Choose file</label
+            >
+          </div>
+          <div class="input-group-append">
+            <button type="submit" class="btn btn-secondary">
+              Load New Model
+            </button>
+          </div>
+        </div>
+      </form>
     </nav>
     <!-- The Viewer will be instantiated here -->
     <main>
@@ -46,6 +74,6 @@
       </div>
     </main>
     <!-- Custom script -->
-    <script src="./js/viewer-scripts.js"></script>
+    <script src="./js/viewer-scripts.js" type="module"></script>
   </body>
 </html>

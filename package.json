@@ -21,7 +21,8 @@
     "body-parser": "^1.18.3",
     "express": "^4.16.3",
     "jquery": "^3.4.1",
-    "multer": "^1.4.0"
+    "multer": "^1.4.0",
+    "three": "^0.104.0"
   },
   "devDependencies": {
     "eslint": "^5.0.1",
