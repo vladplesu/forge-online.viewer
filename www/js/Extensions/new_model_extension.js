@@ -23,7 +23,6 @@ LoadNewModel.prototype.loadNewModel = async function(e) {
             this.onDocumentLoadSuccessBinded,
             this.onDocumentLoadFailureBinded
         );
-        console.log(this.viewer);
     } catch (err) {
         console.log(err);
     }
@@ -49,7 +48,6 @@ LoadNewModel.prototype.onDocumentLoadSuccess = function(doc) {
         globalOffset: { x: 0, y: 0, z: 0 },
         sharedPropertyDbPath: doc.getPropertyDbPath()
     };
-    console.log(this.viewer);
     this.viewer.loadModel(
         svfUrl,
         loaderOptions,

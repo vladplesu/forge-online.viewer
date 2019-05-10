@@ -23,18 +23,19 @@ function onDocumentLoadSuccess(doc) {
     // We could still make use of Document.getSubItemsWithProperties()
     // However, when using a ViewingApplication, we have access to the **bubble** attribute,
     // which references the root node of a graph that wraps each object from the Manifest JSON.
-    const viewables = Autodesk.Viewing.Document.getSubItemsWithProperties(
-        doc.getRootItem(),
-        { type: 'geometry' },
-        true
-    );
-    if (viewables.length === 0) {
+    // const viewables = Autodesk.Viewing.Document.getSubItemsWithProperties(
+    //     doc.getRootItem(),
+    //     { type: 'geometry' },
+    //     true
+    // );
+    const geometries = doc.getRoot().search({ type: 'geometry' });
+    if (geometries.length === 0) {
         console.error('Document contains no viewables.');
         return;
     }
 
     // Choose any of the avialble viewables
-    const initViewable = viewables[0];
+    const initViewable = geometries[0];
     const svfUrl = doc.getViewablePath(initViewable);
     const mat = new THREE.Matrix4();
     const modelOptions = {

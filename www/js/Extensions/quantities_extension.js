@@ -6,8 +6,9 @@ QuantitiesList.prototype = Object.create(Autodesk.Viewing.Extension.prototype);
 QuantitiesList.prototype.constructor = QuantitiesList;
 
 QuantitiesList.prototype.onGeometryLoadEvent = function(event) {
-    console.log('The geometry has been loaded: ' + event);
-    const quantityPromise = this.viewer.model
+    const models = this.viewer.impl.modelQueue().getModels();
+    const lastModelAdded = models[models.length - 1];
+    const quantityPromise = lastModelAdded
         .getPropertyDb()
         .executeUserFunction(userFunction);
 
@@ -17,7 +18,8 @@ QuantitiesList.prototype.onGeometryLoadEvent = function(event) {
                 console.log('Model doesn\'t contain valid elemens.');
             }
             const $ulItem = $('#quantities');
-            retValue.forEach((element, i) => {
+            $ulItem.append(`<h3>${retValue[0].modelName}</h3>`);
+            retValue[1].forEach((element, i) => {
                 const liItem = document.createElement('li');
                 liItem.classList.add(
                     'list-group-item',
@@ -67,16 +69,11 @@ QuantitiesList.prototype.onGeometryLoadEvent = function(event) {
 
                 $ulItem.append(liItem);
             });
-            console.log(retValue);
         })
         .catch(err => console.log(err));
 };
 
 QuantitiesList.prototype.load = function() {
-    // console.log(
-    //     'This is when the extension is loaded: ' +
-    //         this.viewer +
-    //         '\n======================================'
     this.onGeometryLoadBinded = this.onGeometryLoadEvent.bind(this);
     this.viewer.addEventListener(
         Autodesk.Viewing.GEOMETRY_LOADED_EVENT,
@@ -100,14 +97,22 @@ Autodesk.Viewing.theExtensionManager.registerExtension(
 );
 
 function userFunction(pdb) {
+    let data = [];
     let totalElements = [];
+    pdb.enumObjects(function(dbId) {
+        if (dbId === 1) {
+            const obj = pdb.getObjectProperties(dbId);
+            const modelName = obj.name;
+            data.push({ modelName });
+            return true;
+        }
+    });
     pdb.enumObjects(function(dbId) {
         const objProps = pdb.getObjectProperties(dbId, [
             'Material',
             'Volume',
             'SDEV_PhysicalCode'
         ]);
-
         if (objProps && objProps.properties) {
             const hasPhysicalCode = objProps.properties.findIndex(
                 propObj => propObj.displayName === 'SDEV_PhysicalCode'
@@ -135,5 +140,7 @@ function userFunction(pdb) {
         }
     });
 
-    return totalElements;
+    data.push(totalElements);
+
+    return data;
 }
