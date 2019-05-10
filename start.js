@@ -177,6 +177,9 @@ String.prototype.toBase64 = function() {
 
 var multer = require('multer'); // To handle file upload
 var upload = multer({ dest: 'tmp/' }); // Save file into local /tmp folder
+var followRedirects = require('follow-redirects');
+followRedirects.maxRedirects = 10;
+followRedirects.maxBodyLength = 80 * 1024 * 1024;
 
 // Route /api/forge/datamanagement/bucket/upload
 app.post(
@@ -225,6 +228,7 @@ app.get('/api/forge/modelderivative/:urn', function(req, res) {
     var urn = req.params.urn;
     var format_type = 'svf';
     var format_views = ['2d', '3d'];
+    var format_advanced = { switchloader: true };
     Axios({
         method: 'POST',
         url:
@@ -241,7 +245,8 @@ app.get('/api/forge/modelderivative/:urn', function(req, res) {
                 formats: [
                     {
                         type: format_type,
-                        views: format_views
+                        views: format_views,
+                        advanced: format_advanced
                     }
                 ]
             }
@@ -264,6 +269,7 @@ app.get('/api/forge/modelderivative/new/:urn', function(req, res) {
     var urn = req.params.urn;
     var format_type = 'svf';
     var format_views = ['2d', '3d'];
+    var format_advanced = { switchloader: true };
     Axios({
         method: 'POST',
         url:
@@ -280,7 +286,8 @@ app.get('/api/forge/modelderivative/new/:urn', function(req, res) {
                 formats: [
                     {
                         type: format_type,
-                        views: format_views
+                        views: format_views,
+                        advanced: format_advanced
                     }
                 ]
             }
