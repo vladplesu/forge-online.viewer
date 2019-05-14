@@ -77,8 +77,20 @@
           <div id="MyViewerDiv"></div>
         </div>
         <div class="col-7 px-0">
-          <div class="row mx-0">
-            <ul id="quantities" class="list-group w-100"></ul>
+          <div class="row mx-0" id="quantities">
+            <table
+              class="table table-striped table-borderless table-hover table-sm"
+            >
+              <thead class="thead-dark">
+                <th scope="col">#</th>
+                <th scope="col">Structure</th>
+                <th scope="col">Segment</th>
+                <th scope="col">Material</th>
+                <th scope="col">Volume</th>
+                <th scope="col">Price</th>
+              </thead>
+              <tbody></tbody>
+            </table>
           </div>
           <div id="charts" class="row mx-0">
             Volume per segment

@@ -19,78 +19,19 @@ QuantitiesList.prototype.onGeometryLoadEvent = function(event) {
             if (!retValue) {
                 console.log('Model doesn\'t contain valid elemens.');
             }
-            const $ulItem = $('#quantities');
-            $ulItem.append(`<h3>${retValue[0].modelName}</h3>`);
+            const $table = $('#quantities table');
+            // $table.append(`<h3>${retValue[0].modelName}</h3>`);
             retValue[1].forEach((element, i) => {
-                const liItem = document.createElement('li');
-                liItem.classList.add(
-                    'list-group-item',
-                    'list-group-item-action',
-                    'row',
-                    'mx-0',
-                    'd-flex',
-                    'p-1'
-                );
-                liItem.dataset.elementId = element.dbId;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <th scope="row">${i + 1}</th>
+                    <td>${element.structure}</td>
+                    <td>${element.segment}</td>
+                    <td>${element.material}</td>
+                    <td>${Math.round(element.volume * 100) / 100}</td>
+                    <td>${Math.round(element.volume * 300 * 100) / 100} €`;
 
-                const elemNumSpan = document.createElement('span');
-                elemNumSpan.classList.add(
-                    'col-1',
-                    'text-center',
-                    'border-right',
-                    'px-1'
-                );
-                elemNumSpan.innerText = i + 1;
-                liItem.appendChild(elemNumSpan);
-
-                const elemStructSpan = document.createElement('span');
-                elemStructSpan.classList.add(
-                    'col-2',
-                    'border-right',
-                    'text-truncate',
-                    'px-1'
-                );
-                elemStructSpan.innerText = element.structure;
-                liItem.appendChild(elemStructSpan);
-
-                const elemSegmentSpan = document.createElement('span');
-                elemSegmentSpan.classList.add(
-                    'col-3',
-                    'border-right',
-                    'text-truncate',
-                    'px-1'
-                );
-                elemSegmentSpan.innerText = element.segment;
-                liItem.appendChild(elemSegmentSpan);
-
-                const elemMaterialSpan = document.createElement('span');
-                elemMaterialSpan.classList.add(
-                    'col-2',
-                    'text-center',
-                    'border-right',
-                    'px-0'
-                );
-                elemMaterialSpan.innerText = element.material;
-                liItem.appendChild(elemMaterialSpan);
-
-                const elemVolSpan = document.createElement('span');
-                elemVolSpan.classList.add(
-                    'col-2',
-                    'text-center',
-                    'border-right',
-                    'px-0'
-                );
-                elemVolSpan.innerText = Math.round(element.volume * 100) / 100;
-                liItem.appendChild(elemVolSpan);
-
-                const elemPriceSpan = document.createElement('span');
-                elemPriceSpan.classList.add('col-2', 'text-center', 'px-0');
-                elemPriceSpan.innerText = `${Math.round(
-                    element.volume * 300 * 100
-                ) / 100} €`;
-                liItem.appendChild(elemPriceSpan);
-
-                $ulItem.append(liItem);
+                $table.append(tr);
             });
             pieChart(retValue[2]);
         })
