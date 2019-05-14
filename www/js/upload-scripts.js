@@ -13,6 +13,7 @@ $inputFile.change(function() {
     if (!isFileIFC) {
         $inputFile[0].classList.add('is-invalid');
         $invalidFile.slideDown('slow');
+        $loadBtn[0].disabled = true;
         return;
     }
     $inputFile[0].classList.add('is-valid');

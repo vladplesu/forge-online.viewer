@@ -179,7 +179,7 @@ var multer = require('multer'); // To handle file upload
 var upload = multer({ dest: 'tmp/' }); // Save file into local /tmp folder
 var followRedirects = require('follow-redirects');
 followRedirects.maxRedirects = 10;
-followRedirects.maxBodyLength = 80 * 1024 * 1024;
+followRedirects.maxBodyLength = 300 * 1024 * 1024;
 
 // Route /api/forge/datamanagement/bucket/upload
 app.post(

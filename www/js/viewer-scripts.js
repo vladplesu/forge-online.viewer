@@ -20,22 +20,18 @@ Autodesk.Viewing.Initializer(options, function onInitialized() {
  * Proceeds with model initialization.
  */
 function onDocumentLoadSuccess(doc) {
-    // We could still make use of Document.getSubItemsWithProperties()
-    // However, when using a ViewingApplication, we have access to the **bubble** attribute,
-    // which references the root node of a graph that wraps each object from the Manifest JSON.
-    // const viewables = Autodesk.Viewing.Document.getSubItemsWithProperties(
-    //     doc.getRootItem(),
-    //     { type: 'geometry' },
-    //     true
-    // );
-    const geometries = doc.getRoot().search({ type: 'geometry' });
-    if (geometries.length === 0) {
+    const viewables = Autodesk.Viewing.Document.getSubItemsWithProperties(
+        doc.getRootItem(),
+        { type: 'geometry' },
+        true
+    );
+    if (viewables.length === 0) {
         console.error('Document contains no viewables.');
         return;
     }
 
     // Choose any of the avialble viewables
-    const initViewable = geometries[0];
+    const initViewable = viewables[0];
     const svfUrl = doc.getViewablePath(initViewable);
     const mat = new THREE.Matrix4();
     const modelOptions = {
@@ -75,7 +71,7 @@ function getForgeToken(callback) {
 }
 
 /**
- * viewerApp.loadDocument() failuire callback.
+ * Autodesk.Viewing.Document.load() failuire callback.
  */
 function onDocumentLoadFailure(viewerErrorCode) {
     console.error('onDocumentLoadFailure() - errorCode:' + viewerErrorCode);
@@ -85,9 +81,7 @@ function onDocumentLoadFailure(viewerErrorCode) {
 }
 
 /**
- * viewerApp.selectItem() success callback.
- * Invoked after the model's SVF has been initially loaded.
- * It may trigger before any geometry has been downloaded and displayed on-screen.
+ * viewer.start() success callback.
  */
 function onLoadModelSuccess(model) {
     console.log('onLoadModelSuccess()!');
@@ -95,7 +89,7 @@ function onLoadModelSuccess(model) {
 }
 
 /**
- * viewerApp.selectItem() failure callback.
+ * viewer.start() failure callback.
  * Invoked when there's an error fetching the SVF file.
  */
 function onLoadModelError(viewerErrorCode) {
