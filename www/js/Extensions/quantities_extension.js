@@ -1,3 +1,5 @@
+import pieChart from '../pie-chart-generator.js';
+
 function QuantitiesList(viewer, options) {
     Autodesk.Viewing.Extension.call(this, viewer, options);
 }
@@ -41,19 +43,39 @@ QuantitiesList.prototype.onGeometryLoadEvent = function(event) {
                 elemNumSpan.innerText = i + 1;
                 liItem.appendChild(elemNumSpan);
 
-                const elemPhaseSpan = document.createElement('span');
-                elemPhaseSpan.classList.add(
-                    'col-6',
+                const elemStructSpan = document.createElement('span');
+                elemStructSpan.classList.add(
+                    'col-2',
                     'border-right',
                     'text-truncate',
                     'px-1'
                 );
-                elemPhaseSpan.innerText = element.phase;
-                liItem.appendChild(elemPhaseSpan);
+                elemStructSpan.innerText = element.structure;
+                liItem.appendChild(elemStructSpan);
+
+                const elemSegmentSpan = document.createElement('span');
+                elemSegmentSpan.classList.add(
+                    'col-3',
+                    'border-right',
+                    'text-truncate',
+                    'px-1'
+                );
+                elemSegmentSpan.innerText = element.segment;
+                liItem.appendChild(elemSegmentSpan);
+
+                const elemMaterialSpan = document.createElement('span');
+                elemMaterialSpan.classList.add(
+                    'col-2',
+                    'text-center',
+                    'border-right',
+                    'px-0'
+                );
+                elemMaterialSpan.innerText = element.material;
+                liItem.appendChild(elemMaterialSpan);
 
                 const elemVolSpan = document.createElement('span');
                 elemVolSpan.classList.add(
-                    'col-3',
+                    'col-2',
                     'text-center',
                     'border-right',
                     'px-0'
@@ -63,12 +85,14 @@ QuantitiesList.prototype.onGeometryLoadEvent = function(event) {
 
                 const elemPriceSpan = document.createElement('span');
                 elemPriceSpan.classList.add('col-2', 'text-center', 'px-0');
-                elemPriceSpan.innerText =
-                    Math.round(element.volume * 300 * 100) / 100;
+                elemPriceSpan.innerText = `${Math.round(
+                    element.volume * 300 * 100
+                ) / 100} €`;
                 liItem.appendChild(elemPriceSpan);
 
                 $ulItem.append(liItem);
             });
+            pieChart(retValue[2]);
         })
         .catch(err => console.log(err));
 };
@@ -99,6 +123,7 @@ Autodesk.Viewing.theExtensionManager.registerExtension(
 function userFunction(pdb) {
     let data = [];
     let totalElements = [];
+    let chartData = [];
     pdb.enumObjects(function(dbId) {
         if (dbId === 1) {
             const obj = pdb.getObjectProperties(dbId);
@@ -108,39 +133,60 @@ function userFunction(pdb) {
         }
     });
     pdb.enumObjects(function(dbId) {
-        const objProps = pdb.getObjectProperties(dbId, [
-            'Material',
-            'Volume',
-            'SDEV_PhysicalCode'
-        ]);
-        if (objProps && objProps.properties) {
+        const objProps = pdb.getObjectProperties(dbId);
+        // console.log(objProps);
+        if (objProps && objProps.properties && objProps.name !== 'Body') {
             const hasPhysicalCode = objProps.properties.findIndex(
-                propObj => propObj.displayName === 'SDEV_PhysicalCode'
+                propObj => propObj.displayName === 'SDEV_StructureCode'
             );
             if (hasPhysicalCode !== -1) {
                 const volumeObj = objProps.properties.find(
-                    propObj => propObj.displayName === 'Volume'
+                    propObj => propObj.displayName === 'SDEV_Volume'
                 );
                 const materialObj = objProps.properties.find(
                     propObj => propObj.displayName === 'Material'
                 );
-                const phaseObj = objProps.properties.find(
-                    propObj => propObj.displayName === 'SDEV_PhysicalCode'
+                const structureObj = objProps.properties.find(
+                    propObj => propObj.displayName === 'SDEV_StructureCode'
+                );
+                const segmentObj = objProps.properties.find(
+                    propObj => propObj.displayName === 'SDEV_SegmentCode'
                 );
                 if (volumeObj && materialObj) {
                     const volume = volumeObj.displayValue * 0.0283168;
                     const material = materialObj.displayValue;
-                    const phase = phaseObj.displayValue;
+                    const structure = structureObj.displayValue;
+                    const segment = segmentObj.displayValue;
                     totalElements = [
                         ...totalElements,
-                        { dbId, volume, material, phase }
+                        { dbId, structure, segment, volume, material }
                     ];
+
+                    // const segment = phase.match(reg) || ['No Segment'];
+                    const segmentIndex = chartData.findIndex(
+                        obj => obj.segment === segment
+                    );
+                    if (segmentIndex === -1) {
+                        chartData = [
+                            ...chartData,
+                            {
+                                segment,
+                                volume
+                            }
+                        ];
+                    } else {
+                        chartData[segmentIndex].volume += volume;
+                    }
                 }
             }
         }
     });
 
+    console.log(totalElements);
+    // console.log(chartData);
+
     data.push(totalElements);
+    data.push(chartData);
 
     return data;
 }

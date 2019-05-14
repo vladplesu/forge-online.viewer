@@ -18,8 +18,12 @@
     />
     <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/6.*/viewer3D.min.js"></script>
     <script src="./js/three.js"></script>
-    <script src="./js/Extensions/quantities_extension.js"></script>
+    <script src="https://d3js.org/d3.v5.js"></script>
     <script src="./js/Extensions/new_model_extension.js"></script>
+    <script
+      src="./js/Extensions/quantities_extension.js"
+      type="module"
+    ></script>
     <!-- Bootstrap CSS -->
     <link
       rel="stylesheet"
@@ -38,7 +42,7 @@
       <form
         enctype="multipart/form-data"
         method="post"
-        class="needs-validation"
+        class="needs-validation w-75"
         novalidate
       >
         <div class="input-group">
@@ -48,6 +52,7 @@
               name="fileToUpload"
               class="custom-file-input"
               id="inputGroup"
+              required
               accept=".ifc"
             />
             <label for="inputGroup" class="custom-file-label"
@@ -55,25 +60,34 @@
             >
           </div>
           <div class="input-group-append">
-            <button type="submit" class="btn btn-secondary">
+            <button type="submit" class="btn btn-secondary" disabled>
               Load New Model
             </button>
           </div>
+        </div>
+        <div class="invalid-feedback">
+          Please choose a valid file (*.ifc)!
         </div>
       </form>
     </nav>
     <!-- The Viewer will be instantiated here -->
     <main>
       <div class="row mx-0 h-100">
-        <div class="col-7 px-0">
+        <div class="col-5 px-0">
           <div id="MyViewerDiv"></div>
         </div>
-        <div class="col-5 px-0">
-          <ul id="quantities" class="list-group"></ul>
+        <div class="col-7 px-0">
+          <div class="row mx-0">
+            <ul id="quantities" class="list-group w-100"></ul>
+          </div>
+          <div id="charts" class="row mx-0">
+            Volume per segment
+          </div>
         </div>
       </div>
     </main>
     <!-- Custom script -->
+    <script src="./js/upload-scripts.js"></script>
     <script src="./js/viewer-scripts.js" type="module"></script>
   </body>
 </html>
