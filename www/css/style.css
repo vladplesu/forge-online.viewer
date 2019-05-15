@@ -6,3 +6,7 @@ main {
   height: 500px;
   overflow: auto;
 }
+
+path:hover {
+  opacity: 0.7;
+}

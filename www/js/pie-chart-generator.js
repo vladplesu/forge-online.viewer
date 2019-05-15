@@ -1,30 +1,30 @@
-export default function(data) {
-    const width = 400,
+export default function(data, key1, key2) {
+    const width = 300,
         height = Math.min(width, 500);
 
     const pie = d3
         .pie()
         .sort(null)
-        .value(d => d.volume);
+        .value(d => d[key2]);
 
     const arcLabel = d3
         .arc()
-        .outerRadius((Math.min(width, height) / 2) * 0.8)
-        .innerRadius((Math.min(width, height) / 2) * 0.8);
+        .outerRadius((Math.min(width, height) / 2) * 0.65)
+        .innerRadius((Math.min(width, height) / 2) * 0.65);
 
     const arc = d3
         .arc()
-        .outerRadius(Math.min(width, height) / 2 - 1)
+        .outerRadius(Math.min(width, height) / 2 - 10)
         .innerRadius(0);
 
     const color = d3
         .scaleOrdinal()
-        .domain(data.map(d => d.segment))
+        .domain(data.map(d => d[key1]))
         .range(
             d3
                 .quantize(
                     t => d3.interpolateSpectral(t * 0.8 + 0.1),
-                    data.length
+                    data.length > 1 ? data.length : 2
                 )
                 .reverse()
         );
@@ -40,20 +40,21 @@ export default function(data) {
     const svg = d3
         .select('#charts')
         .append('svg')
-        .attr('width', width)
-        .attr('height', height)
+        .attr('class', 'col')
+        .attr('width', '100%')
+        .attr('height', '100%')
         .attr('text-anchor', 'middle')
+        .attr('viewBox', `${-width / 2} ${-height / 2} ${width} ${height}`)
+        .attr('preserveAspectRatio', 'xMinYMin')
         .style('font', '12px sans-serif');
 
-    const g = svg
-        .append('g')
-        .attr('transform', `translate(${width / 2},${height / 2})`);
+    const g = svg.append('g');
 
     g.selectAll('path')
         .data(arcs)
         .enter()
         .append('path')
-        .attr('fill', d => color(d.data.segment))
+        .attr('fill', d => color(d.data[key1]))
         .attr('stroke', 'white')
         .attr('d', arc)
         .transition()
@@ -63,9 +64,7 @@ export default function(data) {
 
     g.selectAll('path')
         .append('title')
-        .text(
-            d => `${d.data.segment}: ${Math.round(d.data.volume * 100) / 100}`
-        );
+        .text(d => `${d.data[key1]}: ${d.data[key2]} €`);
 
     const text = g
         .selectAll('text')
@@ -78,14 +77,14 @@ export default function(data) {
         .attr('x', 0)
         .attr('y', '-0.7em')
         .style('font-weight', 'bold')
-        .text(d => d.data.segment);
+        .text(d => d.data[key1]);
 
     text.filter(d => d.endAngle - d.startAngle > 0.25)
         .append('tspan')
         .attr('x', 0)
         .attr('y', '0.7em')
         .attr('fill-opacity', 0.7)
-        .text(d => Math.round(d.data.volume * 100) / 100);
+        .text(d => `${d.data[key2]} €`);
 
     return svg.node();
 }

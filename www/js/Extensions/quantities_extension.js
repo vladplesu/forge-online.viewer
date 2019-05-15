@@ -7,35 +7,108 @@ function QuantitiesList(viewer, options) {
 QuantitiesList.prototype = Object.create(Autodesk.Viewing.Extension.prototype);
 QuantitiesList.prototype.constructor = QuantitiesList;
 
-QuantitiesList.prototype.onGeometryLoadEvent = function(event) {
-    const models = this.viewer.impl.modelQueue().getModels();
-    const lastModelAdded = models[models.length - 1];
-    const quantityPromise = lastModelAdded
-        .getPropertyDb()
-        .executeUserFunction(userFunction);
+QuantitiesList.prototype.onGeometryLoadEvent = async function(event) {
+    try {
+        const models = this.viewer.impl.modelQueue().getModels();
+        const lastModelAdded = models[models.length - 1];
+        let allModelsData = [];
+        for (let i = 0; i < models.length; i++) {
+            const modelData = await models[i]
+                .getPropertyDb()
+                .executeUserFunction(userFunction);
+            allModelsData = [...allModelsData, ...modelData[1]];
+        }
 
-    quantityPromise
-        .then(function(retValue) {
-            if (!retValue) {
-                console.log('Model doesn\'t contain valid elemens.');
-            }
+        if (!allModelsData) {
+            console.log('Model doesn\'t contain valid elemens.');
+        } else {
             const $table = $('#quantities table');
-            // $table.append(`<h3>${retValue[0].modelName}</h3>`);
-            retValue[1].forEach((element, i) => {
+            const $tbody = $('#quantities table tbody');
+            $tbody[0].innerHTML = '';
+            allModelsData.forEach((element, i) => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <th scope="row">${i + 1}</th>
                     <td>${element.structure}</td>
                     <td>${element.segment}</td>
+                    <td>${element.assemblyCode}</td>
+                    <td>${element.area}</td>
+                    <td>${element.formworkPrice} €</td>
                     <td>${element.material}</td>
                     <td>${Math.round(element.volume * 100) / 100}</td>
-                    <td>${Math.round(element.volume * 300 * 100) / 100} €`;
+                    <td>${element.materialPrice} €</td>
+                    <td>${element.totalPrice} €`;
 
                 $table.append(tr);
             });
-            pieChart(retValue[2]);
-        })
-        .catch(err => console.log(err));
+        }
+
+        let chartData = allModelsData;
+        if (chartData) {
+            let priceChart = [];
+            let materialChart = [];
+            let materialTypeChart = [
+                { name: 'Formwork', totalPrice: 0 },
+                { name: 'Concrete', totalPrice: 0 }
+            ];
+            let totalVolume = 0;
+            let totalPrice = 0;
+            chartData.forEach(element => {
+                const segmentIndex = priceChart.findIndex(
+                    obj => obj.segment === element.segment
+                );
+                if (segmentIndex === -1) {
+                    priceChart = [
+                        ...priceChart,
+                        {
+                            segment: element.segment,
+                            totalPrice: element.totalPrice
+                        }
+                    ];
+                } else {
+                    priceChart[segmentIndex].totalPrice += element.totalPrice;
+                }
+
+                const materialIndex = materialChart.findIndex(
+                    obj => obj.material === element.material
+                );
+
+                if (materialIndex === -1) {
+                    materialChart = [
+                        ...materialChart,
+                        {
+                            material: element.material,
+                            totalPrice: element.materialPrice
+                        }
+                    ];
+                } else {
+                    materialChart[materialIndex].totalPrice +=
+                        element.materialPrice;
+                }
+
+                materialTypeChart[0].totalPrice += element.formworkPrice;
+                materialTypeChart[1].totalPrice += element.materialPrice;
+
+                totalVolume += element.volume;
+                totalPrice += element.formworkPrice + element.materialPrice;
+            });
+            const $genInfo = $('#general-info');
+            $genInfo[0].innerHTML = `
+                <span class='col text-center h4'>
+                    Total volume: ${Math.round(totalVolume)}
+                </span>
+                <span class='col text-center h4'>
+                    Total Price: ${totalPrice} €
+                </span>`;
+            const $charts = $('#charts');
+            $charts[0].innerHTML = '';
+            pieChart(priceChart, 'segment', 'totalPrice');
+            pieChart(materialChart, 'material', 'totalPrice');
+            pieChart(materialTypeChart, 'name', 'totalPrice');
+        }
+    } catch (err) {
+        console.log(err);
+    }
 };
 
 QuantitiesList.prototype.load = function() {
@@ -64,7 +137,6 @@ Autodesk.Viewing.theExtensionManager.registerExtension(
 function userFunction(pdb) {
     let data = [];
     let totalElements = [];
-    let chartData = [];
     pdb.enumObjects(function(dbId) {
         if (dbId === 1) {
             const obj = pdb.getObjectProperties(dbId);
@@ -75,8 +147,12 @@ function userFunction(pdb) {
     });
     pdb.enumObjects(function(dbId) {
         const objProps = pdb.getObjectProperties(dbId);
-        // console.log(objProps);
-        if (objProps && objProps.properties && objProps.name !== 'Body') {
+        console.log(objProps);
+        if (
+            objProps &&
+            objProps.properties &&
+            objProps.name.startsWith('SDEV')
+        ) {
             const hasPhysicalCode = objProps.properties.findIndex(
                 propObj => propObj.displayName === 'SDEV_StructureCode'
             );
@@ -93,41 +169,47 @@ function userFunction(pdb) {
                 const segmentObj = objProps.properties.find(
                     propObj => propObj.displayName === 'SDEV_SegmentCode'
                 );
+                const assemblyObj = objProps.properties.find(
+                    propObj => propObj.displayName === 'Assembly Code'
+                );
+                const areaObj = objProps.properties.find(
+                    propObj => propObj.displayName === 'SDEV_Area'
+                );
                 if (volumeObj && materialObj) {
-                    const volume = volumeObj.displayValue * 0.0283168;
-                    const material = materialObj.displayValue;
                     const structure = structureObj.displayValue;
                     const segment = segmentObj.displayValue;
+                    const assemblyCode = assemblyObj
+                        ? assemblyObj.displayValue
+                        : '';
+                    const area = areaObj ? Math.round(areaObj.displayValue) : 0;
+                    const formworkPrice = Math.round(area * 10);
+                    const material = materialObj.displayValue;
+                    const volume = volumeObj.displayValue;
+                    const materialPrice = Math.round(volume * 75);
+                    const totalPrice = formworkPrice + materialPrice;
                     totalElements = [
                         ...totalElements,
-                        { dbId, structure, segment, volume, material }
+                        {
+                            dbId,
+                            structure,
+                            segment,
+                            assemblyCode,
+                            area,
+                            formworkPrice,
+                            material,
+                            volume,
+                            materialPrice,
+                            totalPrice
+                        }
                     ];
-
-                    // const segment = phase.match(reg) || ['No Segment'];
-                    const segmentIndex = chartData.findIndex(
-                        obj => obj.segment === segment
-                    );
-                    if (segmentIndex === -1) {
-                        chartData = [
-                            ...chartData,
-                            {
-                                segment,
-                                volume
-                            }
-                        ];
-                    } else {
-                        chartData[segmentIndex].volume += volume;
-                    }
                 }
             }
         }
     });
 
-    console.log(totalElements);
-    // console.log(chartData);
+    // totalElements.sort((a, b) => a.volume - b.volume);
 
     data.push(totalElements);
-    data.push(chartData);
 
     return data;
 }
