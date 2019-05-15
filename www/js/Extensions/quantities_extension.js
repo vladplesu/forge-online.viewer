@@ -102,9 +102,19 @@ QuantitiesList.prototype.onGeometryLoadEvent = async function(event) {
                 </span>`;
             const $charts = $('#charts');
             $charts[0].innerHTML = '';
-            pieChart(priceChart, 'segment', 'totalPrice');
-            pieChart(materialChart, 'material', 'totalPrice');
-            pieChart(materialTypeChart, 'name', 'totalPrice');
+            pieChart(priceChart, 'segment', 'totalPrice', 'Price Per Segment');
+            pieChart(
+                materialChart,
+                'material',
+                'totalPrice',
+                'Price Per Concrete Type'
+            );
+            pieChart(
+                materialTypeChart,
+                'name',
+                'totalPrice',
+                'Price Per Materials'
+            );
         }
     } catch (err) {
         console.log(err);

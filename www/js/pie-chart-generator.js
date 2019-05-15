@@ -1,4 +1,12 @@
-export default function(data, key1, key2) {
+function mouseover(d) {
+    console.log('The mouse is over the graph: ' + d);
+}
+
+function mouseout(d) {
+    console.log('The mouse is out!');
+}
+
+export default function(data, key1, key2, chartTitle) {
     const width = 300,
         height = Math.min(width, 500);
 
@@ -9,12 +17,12 @@ export default function(data, key1, key2) {
 
     const arcLabel = d3
         .arc()
-        .outerRadius((Math.min(width, height) / 2) * 0.65)
-        .innerRadius((Math.min(width, height) / 2) * 0.65);
+        .outerRadius((Math.min(width, height) / 2) * 0.5)
+        .innerRadius((Math.min(width, height) / 2) * 0.5);
 
     const arc = d3
         .arc()
-        .outerRadius(Math.min(width, height) / 2 - 10)
+        .outerRadius(Math.min(width, height) / 2 - 30)
         .innerRadius(0);
 
     const color = d3
@@ -57,6 +65,7 @@ export default function(data, key1, key2) {
         .attr('fill', d => color(d.data[key1]))
         .attr('stroke', 'white')
         .attr('d', arc)
+        .on('mouseover', mouseover)
         .transition()
         .ease(d3.easeLinear)
         .duration(2000)
@@ -85,6 +94,12 @@ export default function(data, key1, key2) {
         .attr('y', '0.7em')
         .attr('fill-opacity', 0.7)
         .text(d => `${d.data[key2]} €`);
+
+    svg.append('text')
+        .attr('x', 0)
+        .attr('y', height / 2 - 10)
+        .attr('class', 'h5')
+        .text(chartTitle);
 
     return svg.node();
 }
