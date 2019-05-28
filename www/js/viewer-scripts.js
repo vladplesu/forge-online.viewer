@@ -1,3 +1,5 @@
+import { openDb } from './indexedDB/index.js';
+
 var viewer;
 var options = {
     env: 'AutodeskProduction',
@@ -42,10 +44,16 @@ function onDocumentLoadSuccess(doc) {
 
     const viewerDiv = document.getElementById('MyViewerDiv');
     const config = {
-        extensions: ['NewModelExtension', 'QuantitiesExtension']
+        extensions: [
+            'NewModelExtension',
+            // 'QuantitiesExtension',
+            'PopulateDatabaseExtension'
+        ]
     };
     viewer = new Autodesk.Viewing.Private.GuiViewer3D(viewerDiv, config);
     viewer.start(svfUrl, modelOptions, onLoadModelSuccess, onLoadModelError);
+
+    openDb();
 }
 
 // Get Query string from URL,
