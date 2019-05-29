@@ -1,5 +1,15 @@
 import { addElements, displayElements } from '../indexedDB/index.js';
 
+const PROP_NAMES = [
+    'GUID',
+    'SDEV_StructureCode',
+    'SDEV_SegmentCode',
+    'Assembly Code',
+    'Material',
+    'SDEV_Volume',
+    'SDEV_Area'
+];
+
 class PopulateDatabase extends Autodesk.Viewing.Extension {
     constructor(viewer, options) {
         super(viewer, options);
@@ -46,7 +56,7 @@ class PopulateDatabase extends Autodesk.Viewing.Extension {
                         let totalElements = [];
                         pdb.enumObjects(function(dbId) {
                             const objProps = pdb.getObjectProperties(dbId);
-                            console.log(objProps);
+                            // console.log(objProps);
                             if (
                                 objProps &&
                                 objProps.properties &&
@@ -58,56 +68,10 @@ class PopulateDatabase extends Autodesk.Viewing.Extension {
                                         'SDEV_StructureCode'
                                 );
                                 if (hasPhysicalCode !== -1) {
-                                    const volumeObj = objProps.properties.find(
-                                        propObj =>
-                                            propObj.displayName ===
-                                            'SDEV_Volume'
-                                    );
-                                    const materialObj = objProps.properties.find(
-                                        propObj =>
-                                            propObj.displayName === 'Material'
-                                    );
-                                    const structureObj = objProps.properties.find(
-                                        propObj =>
-                                            propObj.displayName ===
-                                            'SDEV_StructureCode'
-                                    );
-                                    const segmentObj = objProps.properties.find(
-                                        propObj =>
-                                            propObj.displayName ===
-                                            'SDEV_SegmentCode'
-                                    );
-                                    const areaObj = objProps.properties.find(
-                                        propObj =>
-                                            propObj.displayName === 'SDEV_Area'
-                                    );
-                                    const guidObj = objProps.properties.find(
-                                        propObj =>
-                                            propObj.displayName === 'GUID'
-                                    );
-                                    if (volumeObj && materialObj) {
-                                        const structure =
-                                            structureObj.displayValue;
-                                        const segment = segmentObj.displayValue;
-                                        const area = areaObj
-                                            ? Math.round(areaObj.displayValue)
-                                            : 0;
-                                        const material =
-                                            materialObj.displayValue;
-                                        const volume = volumeObj.displayValue;
-                                        const guid = guidObj.displayValue;
-                                        totalElements = [
-                                            ...totalElements,
-                                            {
-                                                guid,
-                                                dbId,
-                                                structure,
-                                                segment,
-                                                material,
-                                                properties: [{ area, volume }]
-                                            }
-                                        ];
-                                    }
+                                    totalElements = [
+                                        ...totalElements,
+                                        objProps
+                                    ];
                                 }
                             }
                         });
@@ -120,14 +84,49 @@ class PopulateDatabase extends Autodesk.Viewing.Extension {
             if (!allModelsData) {
                 console.log('Model doesn\'t contain valid elemens.');
             } else {
-                // allModelsData.forEach(element => addElement(element));
-                addElements(allModelsData);
-
+                let allElements = [];
+                allModelsData.forEach(objProps => {
+                    const element = this.extractProperties(
+                        objProps.dbId,
+                        objProps.properties
+                    );
+                    allElements = [...allElements, element];
+                });
+                addElements(allElements);
                 displayElements();
             }
         } catch (err) {
             console.log(err);
         }
+    }
+
+    extractProperties(dbId, properties) {
+        const element = { dbId, properties: [] };
+        const dimensions = {};
+        PROP_NAMES.forEach(propName => {
+            const obj = this.getObjectProps(properties, propName);
+            const arr = propName
+                .toLocaleLowerCase()
+                .replace(' ', '')
+                .split('_');
+            const name = arr[arr.length - 1];
+            if (name === 'area' || name === 'volume') {
+                dimensions[name] =
+                    typeof obj === 'undefined' ? 0 : obj.displayValue;
+            } else {
+                element[name] =
+                    typeof obj === 'undefined' ? '' : obj.displayValue;
+            }
+        });
+        element.properties.push(dimensions);
+        return element;
+    }
+
+    getObjectProps(properties, nameProp) {
+        const prop = properties.find(
+            propObj => propObj.displayName === nameProp
+        );
+        return prop;
     }
 }
 

@@ -23,8 +23,8 @@ const openDb = () => {
             { keyPath: 'guid' }
         );
 
-        store.createIndex('structure', 'structure', { unique: false });
-        store.createIndex('segment', 'segment', { unique: false });
+        store.createIndex('structure', 'structurecode', { unique: false });
+        store.createIndex('segment', 'segmentcode', { unique: false });
         store.createIndex('material', 'material', { unique: false });
     };
 };
@@ -44,7 +44,6 @@ const displayElements = store => {
     if (typeof store === 'undefined')
         store = getObjectStore(DB_STORE_NAME, 'readonly');
 
-    // const $table = $('#quantities table');
     const $tbody = $('#quantities table tbody');
     $tbody.empty();
 
@@ -58,22 +57,29 @@ const displayElements = store => {
     };
 
     let i = 1;
-    const myIndex = store.index('segment');
+    const myIndex = store.index('structure');
     req = myIndex.openCursor();
     req.onsuccess = event => {
         const cursor = event.target.result;
         if (cursor) {
-            // console.log('displayElements cursor: ', cursor);
             const value = cursor.value;
             const tr = document.createElement('tr');
             tr.innerHTML = `
                     <th scope="row">${i}</th>
-                    <td>${value.structure}</td>
-                    <td>${value.segment}</td>
+                    <td>${value.structurecode}</td>
+                    <td>${value.segmentcode}</td>
+                    <td>${value.assemblycode}</td>
                     <td>${value.properties[0].area}</td>
+                    <td>${Math.round(value.properties[0].area * 10)}
                     <td>${value.material}</td>
                     <td>${Math.round(value.properties[0].volume * 100) /
-                        100}</td>`;
+                        100}</td>
+                    <td>${Math.round(value.properties[0].volume * 100 * 75) /
+                        100}</td>
+                    <td>${Math.round(
+        value.properties[0].area * 10 * 100 +
+                            value.properties[0].volume * 75 * 100
+    ) / 100}`;
 
             $tbody.append(tr);
 
@@ -87,24 +93,45 @@ const displayElements = store => {
 };
 
 /**
- * @param {Object} element containing the following keys: guid, dbId, structure, segment, material, properties
+ * @param {Array} elements
  */
 const addElements = elements => {
-    // console.log('addElement arguments:', arguments);
-
     const store = getObjectStore(DB_STORE_NAME, 'readwrite');
     let req;
-    elements.forEach(element => {
-        try {
-            req = store.get(element.guid);
-        } catch (err) {
-            throw err;
-        }
+    req = store.openCursor();
+    req.onsuccess = event => {
+        const cursor = event.target.result;
 
-        req.onsuccess = event => {
-            const data = event.target.result;
-            console.log(data);
-            if (typeof data === 'undefined') {
+        // If the cursor is pointing at something, ask for the data
+        if (cursor) {
+            req = store.get(cursor.key);
+            req.onsuccess = event => {
+                const data = event.target.result;
+                const elementIndex = elements.findIndex(
+                    element => element.guid === data.guid
+                );
+                if (elementIndex === -1) {
+                    req = store.delete(cursor.key);
+                    req.onsuccess = () => {
+                        console.log('Element was deleted');
+                    };
+                } else {
+                    data.properties = [
+                        ...data.properties,
+                        ...elements[elementIndex].properties
+                    ];
+                    req = store.put(data);
+                    req.onsuccess = () => {
+                        console.log('Elemenet was updated');
+                    };
+                    elements.splice(elementIndex, 1);
+                }
+            };
+
+            cursor.continue();
+        } else {
+            console.log(elements);
+            elements.forEach(element => {
                 try {
                     req = store.add(element);
                 } catch (err) {
@@ -119,16 +146,9 @@ const addElements = elements => {
                         event.target.error.message
                     );
                 };
-            } else {
-                data.properties = [...data.properties, ...element.properties];
-                console.log(`Element: ${data.properties} exists`);
-                req = store.put(data);
-                req.onsuccess = () => {
-                    console.log('Elemenet was updated');
-                };
-            }
-        };
-    });
+            });
+        }
+    };
 };
 
 export { addElements, openDb, displayElements };
