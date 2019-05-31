@@ -1,3 +1,5 @@
+import { compare } from './helpers.js';
+
 const DB_NAME = 'sdev-demo-version-control';
 const DB_VERSION = 1;
 const DB_STORE_NAME = 'elements';
@@ -26,6 +28,7 @@ const openDb = () => {
         store.createIndex('structure', 'structurecode', { unique: false });
         store.createIndex('segment', 'segmentcode', { unique: false });
         store.createIndex('material', 'material', { unique: false });
+        store.createIndex('dbId', 'dbId', { unique: false });
     };
 };
 
@@ -64,22 +67,24 @@ const displayElements = store => {
         if (cursor) {
             const value = cursor.value;
             const tr = document.createElement('tr');
+            const formworkPrice = Math.round(value.properties[0].area * 10);
+            const concretePrice =
+                Math.round(value.properties[0].volume * 100 * 75) / 100;
+            const totalPrice = formworkPrice + concretePrice;
+            const areaChange = compare(value.properties, 'area');
+            const volumeChange = compare(value.properties, 'volume');
             tr.innerHTML = `
                     <th scope="row">${i}</th>
                     <td>${value.structurecode}</td>
                     <td>${value.segmentcode}</td>
                     <td>${value.assemblycode}</td>
-                    <td>${value.properties[0].area}</td>
-                    <td>${Math.round(value.properties[0].area * 10)}
+                    <td>${value.properties[0].area} ${areaChange}</td>
+                    <td>${formworkPrice}</td>
                     <td>${value.material}</td>
                     <td>${Math.round(value.properties[0].volume * 100) /
-                        100}</td>
-                    <td>${Math.round(value.properties[0].volume * 100 * 75) /
-                        100}</td>
-                    <td>${Math.round(
-        value.properties[0].area * 10 * 100 +
-                            value.properties[0].volume * 75 * 100
-    ) / 100}`;
+                        100} ${volumeChange}</td>
+                    <td>${concretePrice}</td>
+                    <td>${totalPrice}`;
 
             $tbody.append(tr);
 
@@ -102,6 +107,7 @@ const addElements = elements => {
     req.onsuccess = event => {
         const cursor = event.target.result;
 
+        let msg = { removed: 0, added: 0 };
         // If the cursor is pointing at something, ask for the data
         if (cursor) {
             req = store.get(cursor.key);
@@ -114,15 +120,16 @@ const addElements = elements => {
                     req = store.delete(cursor.key);
                     req.onsuccess = () => {
                         console.log('Element was deleted');
+                        msg.removed++;
                     };
                 } else {
                     data.properties = [
-                        ...data.properties,
-                        ...elements[elementIndex].properties
+                        ...elements[elementIndex].properties,
+                        ...data.properties
                     ];
                     req = store.put(data);
                     req.onsuccess = () => {
-                        console.log('Elemenet was updated');
+                        console.log('Element was updated');
                     };
                     elements.splice(elementIndex, 1);
                 }
@@ -139,6 +146,7 @@ const addElements = elements => {
                 }
                 req.onsuccess = () => {
                     console.log('Insertion in DB successful');
+                    msg.added++;
                 };
                 req.onerror = event => {
                     console.log(
@@ -147,6 +155,11 @@ const addElements = elements => {
                     );
                 };
             });
+            alert(
+                `${msg.removed} items where removed. \n${
+                    msg.added
+                } items where added.`
+            );
         }
     };
 };
