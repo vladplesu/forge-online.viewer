@@ -167,7 +167,7 @@ const displayDashboard = store => {
 
     let req;
     let segments = [];
-    let start = 0;
+    let start = 1;
     let end = 7;
     const myIndex = store.index('segment');
     req = myIndex.openCursor();
@@ -188,7 +188,7 @@ const displayDashboard = store => {
                         data.properties[0].volume * 75
                 });
                 start++;
-                end--;
+                end++;
             } else {
                 segments[index].totalPrice +=
                     data.properties[0].area * 10 +
@@ -202,4 +202,28 @@ const displayDashboard = store => {
     };
 };
 
-export { addElements, openDb, displayElements, displayDashboard };
+const getDbIds = (segment, store) => {
+    console.log('getDbIds...');
+    if (typeof store === 'undefined')
+        store = getObjectStore(DB_STORE_NAME, 'readonly');
+
+    let req;
+    let dbIds = [];
+    const myIndex = store.index('segment');
+    req = myIndex.openCursor();
+    req.onsuccess = event => {
+        const cursor = event.target.result;
+        if (cursor) {
+            const data = cursor.value;
+            if (data.segmentcode === segment) {
+                dbIds.push(data.dbId);
+            }
+
+            cursor.continue();
+        } else {
+            NOP_VIEWER.select(dbIds, Autodesk.Viewing.SelectionMode.REGULAR);
+        }
+    };
+};
+
+export { addElements, openDb, displayElements, displayDashboard, getDbIds };

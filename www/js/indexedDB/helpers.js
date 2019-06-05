@@ -1,3 +1,5 @@
+import { getDbIds } from './index.js';
+
 const MONTH_NAMES = [
     'Jan',
     'Feb',
@@ -78,6 +80,14 @@ const dashboard = (id, fData) => {
         }
     });
 
+    // Create currency format locale
+    const locale = d3.formatLocale({
+        decimal: '.',
+        thousands: ',',
+        grouping: [3],
+        currency: ['', '€']
+    });
+
     // function to handle bar chart.
     const costFlow = pD => {
         const cF = {},
@@ -150,11 +160,12 @@ const dashboard = (id, fData) => {
             .attr('width', x.bandwidth())
             .attr('height', d => cFdim.h - y(d[1]))
             .attr('fill', barColor)
+            .attr('style', 'cursor: pointer')
             .on('mouseover', mouseover)
             .on('mouseout', mouseout);
 
         bars.append('text')
-            .text(d => d3.format(',')(Math.round(d[1])))
+            .text(d => locale.format('$,')(Math.round(d[1])))
             .attr('x', function(d) {
                 return x(d[0]) + x.bandwidth() / 2;
             })
@@ -181,7 +192,7 @@ const dashboard = (id, fData) => {
             bars.select('text')
                 .transition()
                 .duration(500)
-                .text(d => d3.format(',')(Math.round(d[1])))
+                .text(d => locale.format('$,')(Math.round(d[1])))
                 .attr('y', d => y(d[1] + 5));
         };
 
@@ -235,6 +246,11 @@ const dashboard = (id, fData) => {
             cF.update(fData.map(v => [v.month, v.total]), barColor);
         };
 
+        const onclick = d => {
+            console.log(d.data);
+            getDbIds(d.data.segment);
+        };
+
         // Draw the pie slices.
         piesvg
             .selectAll('path')
@@ -242,10 +258,11 @@ const dashboard = (id, fData) => {
             .enter()
             .append('path')
             .attr('d', arc)
-            // .each(d => (this._current = d))
+            .attr('style', 'cursor: pointer')
             .attr('fill', d => segColor(d.data.segment))
             .on('mouseover', mouseover)
-            .on('mouseout', mouseout);
+            .on('mouseout', mouseout)
+            .on('click', onclick);
 
         // Create function to update pie-chart. This will be used by bar chart.
         pC.update = nD => {
@@ -303,7 +320,7 @@ const dashboard = (id, fData) => {
         // Create the third column for each segment.
         tr.append('td')
             .attr('class', 'legendFreq')
-            .text(d => d3.format(',')(Math.round(d.price)));
+            .text(d => locale.format('$,')(Math.round(d.price)));
 
         // Create the fourth column for each segment.
         tr.append('td')
@@ -320,7 +337,7 @@ const dashboard = (id, fData) => {
 
             // Update the prices.
             l.select('.legendFreq').text(d =>
-                d3.format(',')(Math.round(d.price))
+                locale.format('$,')(Math.round(d.price))
             );
 
             // Update the percentage column.
