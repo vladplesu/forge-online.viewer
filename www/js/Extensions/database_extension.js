@@ -1,4 +1,8 @@
-import { addElements, displayElements } from '../indexedDB/index.js';
+import {
+    addElements,
+    displayElements,
+    displayDashboard
+} from '../indexedDB/index.js';
 
 const PROP_NAMES = [
     'GUID',
@@ -93,7 +97,8 @@ class PopulateDatabase extends Autodesk.Viewing.Extension {
                     allElements = [...allElements, element];
                 });
                 addElements(allElements);
-                displayElements();
+                // displayElements();
+                displayDashboard();
             }
         } catch (err) {
             console.log(err);

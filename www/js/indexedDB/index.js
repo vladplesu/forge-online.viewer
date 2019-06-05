@@ -1,4 +1,4 @@
-import { compare } from './helpers.js';
+import { compare, dashboard } from './helpers.js';
 
 const DB_NAME = 'sdev-demo-version-control';
 const DB_VERSION = 1;
@@ -60,7 +60,7 @@ const displayElements = store => {
     };
 
     let i = 1;
-    const myIndex = store.index('structure');
+    const myIndex = store.index('segment');
     req = myIndex.openCursor();
     req.onsuccess = event => {
         const cursor = event.target.result;
@@ -92,7 +92,7 @@ const displayElements = store => {
 
             i++;
         } else {
-            console.log('No more elements');
+            // console.log('No more elements');
         }
     };
 };
@@ -103,11 +103,11 @@ const displayElements = store => {
 const addElements = elements => {
     const store = getObjectStore(DB_STORE_NAME, 'readwrite');
     let req;
+    let msg = { removed: 0, added: 0 };
     req = store.openCursor();
     req.onsuccess = event => {
         const cursor = event.target.result;
 
-        let msg = { removed: 0, added: 0 };
         // If the cursor is pointing at something, ask for the data
         if (cursor) {
             req = store.get(cursor.key);
@@ -119,7 +119,7 @@ const addElements = elements => {
                 if (elementIndex === -1) {
                     req = store.delete(cursor.key);
                     req.onsuccess = () => {
-                        console.log('Element was deleted');
+                        // console.log('Element was deleted');
                         msg.removed++;
                     };
                 } else {
@@ -129,7 +129,7 @@ const addElements = elements => {
                     ];
                     req = store.put(data);
                     req.onsuccess = () => {
-                        console.log('Element was updated');
+                        // console.log('Element was updated');
                     };
                     elements.splice(elementIndex, 1);
                 }
@@ -145,7 +145,7 @@ const addElements = elements => {
                     throw err;
                 }
                 req.onsuccess = () => {
-                    console.log('Insertion in DB successful');
+                    // console.log('Insertion in DB successful');
                     msg.added++;
                 };
                 req.onerror = event => {
@@ -155,13 +155,51 @@ const addElements = elements => {
                     );
                 };
             });
-            alert(
-                `${msg.removed} items where removed. \n${
-                    msg.added
-                } items where added.`
-            );
         }
     };
 };
 
-export { addElements, openDb, displayElements };
+const displayDashboard = store => {
+    console.log('displayDashboard');
+
+    if (typeof store === 'undefined')
+        store = getObjectStore(DB_STORE_NAME, 'readonly');
+
+    let req;
+    let segments = [];
+    let start = 0;
+    let end = 7;
+    const myIndex = store.index('segment');
+    req = myIndex.openCursor();
+    req.onsuccess = event => {
+        const cursor = event.target.result;
+        if (cursor) {
+            const data = cursor.value;
+            const index = segments.findIndex(
+                obj => obj.name === data.segmentcode
+            );
+            if (index === -1) {
+                segments.push({
+                    name: data.segmentcode,
+                    start,
+                    end,
+                    totalPrice:
+                        data.properties[0].area * 10 +
+                        data.properties[0].volume * 75
+                });
+                start++;
+                end--;
+            } else {
+                segments[index].totalPrice +=
+                    data.properties[0].area * 10 +
+                    data.properties[0].volume * 75;
+            }
+
+            cursor.continue();
+        } else {
+            dashboard('#charts', segments);
+        }
+    };
+};
+
+export { addElements, openDb, displayElements, displayDashboard };
