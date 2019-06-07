@@ -34,10 +34,11 @@ const compare = (arr, prop) => {
     return res;
 };
 
-const barColor = 'steelblue';
+const barColor = 'orange';
 
-const dashboard = (id, fData) => {
+const dashboard = (id, sData) => {
     // Format data
+    let fData = JSON.parse(JSON.stringify(sData));
     fData = d3.keys(MONTH_NAMES).map(s => {
         const prices = {};
         fData.forEach(t => {
@@ -52,7 +53,7 @@ const dashboard = (id, fData) => {
                             ? t.totalPrice * 0.7
                             : 0;
             } else {
-                const percentage = Math.random();
+                const percentage = 0.8 / (months - 2); //Math.random();
                 prices[t.name] =
                     s == t.start
                         ? t.totalPrice * 0.1
@@ -92,14 +93,14 @@ const dashboard = (id, fData) => {
     const costFlow = pD => {
         const cF = {},
             cFdim = { t: 60, r: 0, b: 30, l: 0 };
-        cFdim.w = 800 - cFdim.l - cFdim.r;
+        cFdim.w = 600 - cFdim.l - cFdim.r;
         cFdim.h = 300 - cFdim.t - cFdim.b;
 
         // create svg for bar chart
         const cFsvg = d3
             .select(id)
             .append('svg')
-            .attr('width', '100%')
+            .attr('width', cFdim.w + cFdim.t + cFdim.b)
             .attr('height', cFdim.h + cFdim.t + cFdim.b)
             .append('g')
             .attr('transform', `translate(${cFdim.l},${cFdim.t})`);
@@ -118,6 +119,15 @@ const dashboard = (id, fData) => {
             .attr('transform', `translate(0,${cFdim.h})`)
             .call(d3.axisBottom(x).tickSizeOuter(0));
 
+        // Add bar chart title
+        cFsvg
+            .append('text')
+            .attr('x', cFdim.w / 2)
+            .attr('y', -cFdim.b)
+            .attr('class', 'h5')
+            .attr('id', 'chart-title')
+            .text('Cash Flow Per Month For All Segmentes');
+
         // Create function for y-axis map.
         const y = d3
             .scaleLinear()
@@ -125,13 +135,23 @@ const dashboard = (id, fData) => {
             .nice()
             .range([cFdim.h, 0]);
 
+        const onclick = d => {
+            console.log(d.data);
+            const month = MONTH_NAMES.findIndex(t => t === d[0]);
+            const segmentNames = sData
+                .filter(s => month >= s.start && month <= s.end)
+                .map(s => s.name);
+            getDbIds(segmentNames);
+        };
+
         // Create bars for bar chart to contain rectangles and month labels.
         const bars = cFsvg
             .selectAll('.bar')
             .data(pD)
             .enter()
             .append('g')
-            .attr('class', 'bar');
+            .attr('class', 'bar')
+            .on('click', onclick);
 
         // Utility function to be called on mouseovers.
         const mouseover = d => {
@@ -143,14 +163,14 @@ const dashboard = (id, fData) => {
 
             // Call update function of pie-chart and legend.
             pC.update(nD);
-            leg.update(nD);
+            leg.update(nD, d[0]);
         };
 
         // Utility function to be called on mouseout.
         const mouseout = d => {
             // Reset the pie-chart and legend
             pC.update(tP);
-            leg.update(tP);
+            leg.update(tP, '');
         };
 
         // Create the rectangles.
@@ -163,6 +183,7 @@ const dashboard = (id, fData) => {
             .attr('style', 'cursor: pointer')
             .on('mouseover', mouseover)
             .on('mouseout', mouseout);
+        // .on('click', onclick);
 
         bars.append('text')
             .text(d => locale.format('$,')(Math.round(d[1])))
@@ -170,10 +191,11 @@ const dashboard = (id, fData) => {
                 return x(d[0]) + x.bandwidth() / 2;
             })
             .attr('y', d => y(d[1] + 5))
-            .attr('text-anchor', 'middle');
+            .attr('text-anchor', 'middle')
+            .attr('class', 'small');
 
         // Create function to update the bars. This will be used by pie-chart.
-        cF.update = (nD, color) => {
+        cF.update = (nD, color, name) => {
             // update the domain of the y-axis map to reflect change in segments.
             y.domain([0, d3.max(nD, d => d[1])]);
 
@@ -194,6 +216,11 @@ const dashboard = (id, fData) => {
                 .duration(500)
                 .text(d => locale.format('$,')(Math.round(d[1])))
                 .attr('y', d => y(d[1] + 5));
+
+            // Update bar chart title
+            cFsvg
+                .select('#chart-title')
+                .text(`Clash Flow Per Month For ${name}`);
         };
 
         return cF;
@@ -202,7 +229,7 @@ const dashboard = (id, fData) => {
     // function to handle pieChart.
     const pieChart = pD => {
         const pC = {},
-            pieDim = { w: 250, h: 250 };
+            pieDim = { w: 550, h: 550 };
         pieDim.r = Math.min(pieDim.w, pieDim.h) / 2;
 
         // Create svg for pie chart.
@@ -236,19 +263,24 @@ const dashboard = (id, fData) => {
                         ? 0
                         : v.prices[d.data.segment]
                 ]),
-                segColor(d.data.segment)
+                segColor(d.data.segment),
+                d.data.segment
             );
         };
 
         // Utility function to be called on mouseout a pie slice.
         const mouseout = d => {
             // Call the update function of bar chart with all the data.
-            cF.update(fData.map(v => [v.month, v.total]), barColor);
+            cF.update(
+                fData.map(v => [v.month, v.total]),
+                barColor,
+                'All Segmentes'
+            );
         };
 
         const onclick = d => {
             console.log(d.data);
-            getDbIds(d.data.segment);
+            getDbIds([d.data.segment]);
         };
 
         // Draw the pie slices.
@@ -262,7 +294,9 @@ const dashboard = (id, fData) => {
             .attr('fill', d => segColor(d.data.segment))
             .on('mouseover', mouseover)
             .on('mouseout', mouseout)
-            .on('click', onclick);
+            .on('click', onclick)
+            .append('title')
+            .text(d => `${d.data.segment}`);
 
         // Create function to update pie-chart. This will be used by bar chart.
         pC.update = nD => {
@@ -288,13 +322,22 @@ const dashboard = (id, fData) => {
         const leg = {};
 
         const getLegend = (d, aD) =>
-            d3.format('.0%')(d.price / d3.sum(aD.map(v => v.price)));
+            d3.format('.2%')(d.price / d3.sum(aD.map(v => v.price)));
 
         // Create table for legend.
         const legend = d3
             .select('#pie-charts')
             .append('table')
             .attr('class', 'legend');
+
+        legend
+            .append('thead')
+            .append('tr')
+            .append('th')
+            .attr('colspan', '6')
+            .append('text')
+            .attr('id', 'legend-title')
+            .text('Total Cost For Each Segment');
 
         // Create one row per segment.
         const tr = legend
@@ -327,8 +370,103 @@ const dashboard = (id, fData) => {
             .attr('class', 'legendPerc')
             .text(d => getLegend(d, lD));
 
+        const onchange = d => {
+            const selectedIndex = d3.event.target.selectedIndex;
+            const date = d3.event.target.dataset.date;
+            for (let i in sData) {
+                if (sData[i].name === d.segment) {
+                    if (date === 'start' && selectedIndex <= sData[i].end)
+                        sData[i].start = selectedIndex;
+
+                    if (date === 'end' && selectedIndex >= sData[i].start)
+                        sData[i].end = selectedIndex;
+
+                    console.log(sData[i]);
+                    break;
+                }
+            }
+
+            fData = JSON.parse(JSON.stringify(sData));
+            fData = d3.keys(MONTH_NAMES).map(s => {
+                const prices = {};
+                fData.forEach(t => {
+                    const months = t.end - t.start + 1;
+                    if (s == t.start && s == t.end) {
+                        prices[t.name] = t.totalPrice;
+                    } else if (months === 2) {
+                        prices[t.name] =
+                            s == t.start
+                                ? t.totalPrice * 0.3
+                                : s == t.end
+                                    ? t.totalPrice * 0.7
+                                    : 0;
+                    } else {
+                        const percentage = 0.8 / (months - 2); //Math.random();
+                        prices[t.name] =
+                            s == t.start
+                                ? t.totalPrice * 0.1
+                                : s > t.start && s < t.end
+                                    ? t.totalPrice * percentage
+                                    : s == t.end
+                                        ? t.totalPrice
+                                        : 0;
+                        t.totalPrice -=
+                            s == t.start
+                                ? t.totalPrice * 0.1
+                                : s > t.start && s < t.end
+                                    ? t.totalPrice * percentage
+                                    : 0;
+                    }
+                });
+
+                return { month: MONTH_NAMES[s], prices };
+            });
+
+            // compute total for each month
+            fData.forEach(d => {
+                d.total = 0;
+                for (let key in d.prices) {
+                    d.total += d.prices[key];
+                }
+            });
+
+            cF.update(
+                fData.map(v => [v.month, v.total]),
+                barColor,
+                'All Segmentes'
+            );
+        };
+
+        // Create form for start date selection
+        tr.append('td')
+            .append('form')
+            .attr('class', 'form-inline')
+            .append('select')
+            .attr('class', 'custom-select my-0 mr-sm-2')
+            .attr('data-date', 'start')
+            .on('change', onchange)
+            .selectAll('option')
+            .data(MONTH_NAMES)
+            .enter()
+            .append('option')
+            .text(d => d);
+
+        // Create form for end date selection
+        tr.append('td')
+            .append('form')
+            .attr('class', 'form-inline')
+            .append('select')
+            .attr('class', 'custom-select my-0 mr-sm-2')
+            .attr('data-date', 'end')
+            .on('change', onchange)
+            .selectAll('option')
+            .data(MONTH_NAMES)
+            .enter()
+            .append('option')
+            .text(d => d);
+
         // Utility function to be used to update the leggend.
-        leg.update = nD => {
+        leg.update = (nD, month) => {
             // Update the data attached to the row elements.
             const l = legend
                 .select('tbody')
@@ -342,6 +480,22 @@ const dashboard = (id, fData) => {
 
             // Update the percentage column.
             l.select('.legendPerc').text(d => getLegend(d, nD));
+
+            l.transition()
+                .duration(300)
+                .ease(d3.easeLinear)
+                .style('display', 'table-row');
+
+            l.filter(d => d.price === 0)
+                .transition()
+                .duration(300)
+                .ease(d3.easeLinear)
+                .style('display', 'none');
+
+            // Update legend title
+            legend
+                .select('#legend-title')
+                .text(`Total Cost For Each Segment ${month}`);
         };
 
         return leg;
@@ -371,7 +525,12 @@ const dashboard = (id, fData) => {
 
     // Calculate total price by segment fol all state.
     const tP = segments.map(d => {
-        return { segment: d, price: d3.sum(fData.map(t => t.prices[d])) };
+        return {
+            segment: d,
+            price: d3.sum(fData.map(t => t.prices[d])),
+            start: fData.findIndex(s => s.prices[d] !== 0),
+            end: 11 - fData.reverse().findIndex(s => s.prices[d] !== 0)
+        };
     });
 
     // calculate total price by month for all segments.

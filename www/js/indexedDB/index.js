@@ -29,6 +29,7 @@ const openDb = () => {
         store.createIndex('segment', 'segmentcode', { unique: false });
         store.createIndex('material', 'material', { unique: false });
         store.createIndex('dbId', 'dbId', { unique: false });
+        store.createIndex('part', 'segmentpart', { unique: false });
     };
 };
 
@@ -167,28 +168,24 @@ const displayDashboard = store => {
 
     let req;
     let segments = [];
-    let start = 1;
-    let end = 7;
-    const myIndex = store.index('segment');
+    const myIndex = store.index('part');
     req = myIndex.openCursor();
     req.onsuccess = event => {
         const cursor = event.target.result;
         if (cursor) {
             const data = cursor.value;
             const index = segments.findIndex(
-                obj => obj.name === data.segmentcode
+                obj => obj.name === `${data.segmentcode}-${data.segmentpart}`
             );
             if (index === -1) {
                 segments.push({
-                    name: data.segmentcode,
-                    start,
-                    end,
+                    name: `${data.segmentcode}-${data.segmentpart}`,
                     totalPrice:
                         data.properties[0].area * 10 +
                         data.properties[0].volume * 75
                 });
-                start++;
-                end++;
+                // start++;
+                // end++;
             } else {
                 segments[index].totalPrice +=
                     data.properties[0].area * 10 +
@@ -197,31 +194,79 @@ const displayDashboard = store => {
 
             cursor.continue();
         } else {
+            segments.forEach(segment => {
+                segment.start = Math.floor(Math.random() * 11);
+                do {
+                    segment.end = Math.floor(Math.random() * 11);
+                } while (segment.end < segment.start);
+            });
             dashboard('#charts', segments);
         }
     };
 };
 
-const getDbIds = (segment, store) => {
+/**
+ *
+ * @param {Array} segmentNames Array containng the names of the segements containing the elements to be selected
+ * @param {*} store
+ */
+const getDbIds = (segmentNames, store) => {
     console.log('getDbIds...');
     if (typeof store === 'undefined')
         store = getObjectStore(DB_STORE_NAME, 'readonly');
 
     let req;
     let dbIds = [];
-    const myIndex = store.index('segment');
+    const myIndex = store.index('part');
     req = myIndex.openCursor();
     req.onsuccess = event => {
         const cursor = event.target.result;
         if (cursor) {
             const data = cursor.value;
-            if (data.segmentcode === segment) {
-                dbIds.push(data.dbId);
-            }
+            segmentNames.forEach(segmentName => {
+                if (`${data.segmentcode}-${data.segmentpart}` === segmentName) {
+                    dbIds.push(data.dbId);
+                }
+            });
 
             cursor.continue();
         } else {
             NOP_VIEWER.select(dbIds, Autodesk.Viewing.SelectionMode.REGULAR);
+
+            const overlayName = 'temporary-coloreddddd-overlay';
+            const material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+            NOP_VIEWER.impl.createOverlayScene(overlayName, material, material);
+            dbIds.forEach(dbid => {
+                const it = NOP_VIEWER.model.getData().instanceTree;
+
+                it.enumNodeFragments(
+                    dbid,
+                    fragId => {
+                        const renderProxy = NOP_VIEWER.impl.getRenderProxy(
+                            NOP_VIEWER.model,
+                            fragId
+                        );
+
+                        renderProxy.meshProxy = new THREE.Mesh(
+                            renderProxy.geometry,
+                            renderProxy.material
+                        );
+
+                        renderProxy.meshProxy.matrix.copy(
+                            renderProxy.matrixWorld
+                        );
+                        renderProxy.meshProxy.matrixWorldNeedsUpdate = true;
+                        renderProxy.meshProxy.matrixAutoUpdate = false;
+                        renderProxy.meshProxy.frustumCulled = false;
+                        NOP_VIEWER.impl.addOverlay(
+                            overlayName,
+                            renderProxy.meshProxy
+                        );
+                        NOP_VIEWER.impl.invalidate(true);
+                    },
+                    false
+                );
+            });
         }
     };
 };

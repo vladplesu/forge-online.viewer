@@ -11,7 +11,8 @@ const PROP_NAMES = [
     'Assembly Code',
     'Material',
     'SDEV_Volume',
-    'SDEV_Area'
+    'SDEV_Area',
+    'SDEV_SegmentPart'
 ];
 
 class PopulateDatabase extends Autodesk.Viewing.Extension {
@@ -60,7 +61,7 @@ class PopulateDatabase extends Autodesk.Viewing.Extension {
                         let totalElements = [];
                         pdb.enumObjects(function(dbId) {
                             const objProps = pdb.getObjectProperties(dbId);
-                            // console.log(objProps);
+                            console.log(objProps);
                             if (
                                 objProps &&
                                 objProps.properties &&

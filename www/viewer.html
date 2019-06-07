@@ -67,9 +67,10 @@
     </nav>
     <!-- The Viewer will be instantiated here -->
     <main>
-      <div class="row mx-0 h-100">
+      <div class="row mx-0">
         <div class="col-5 px-0">
-          <div id="MyViewerDiv"></div>
+          <div id="charts" class="row m-3 justify-content-center"></div>
+          <div id="MyViewerDiv" class="row mx-3"></div>
         </div>
         <div class="col-7 px-0">
           <!-- <div class="row mx-0" id="quantities">
@@ -91,13 +92,25 @@
               <tbody></tbody>
             </table>
           </div> -->
-          <div id="general-info" class="row mx-0 justify-content-center"></div>
-          <div id="charts" class="row mx-0"></div>
-          <div id="pie-charts" class="row mx-0"></div>
+          <!-- <div id="general-info" class="row m-4 justify-content-center"></div> -->
+          <div
+            id="pie-charts"
+            class="row m-3 align-items-center justify-content-center py-2"
+          ></div>
         </div>
       </div>
     </main>
     <!-- Custom script -->
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"
+      integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"
+      integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy"
+      crossorigin="anonymous"
+    ></script>
     <script src="./js/Extensions/new_model_extension.js"></script>
     <script src="./js/Extensions/database_extension.js" type="module"></script>
     <script src="./js/upload-scripts.js"></script>
