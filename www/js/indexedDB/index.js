@@ -1,5 +1,3 @@
-import { compare, dashboard } from './helpers.js';
-
 const DB_NAME = 'sdev-demo-version-control';
 const DB_VERSION = 1;
 const DB_STORE_NAME = 'elements';
@@ -42,60 +40,36 @@ const getObjectStore = (store_name, mode) => {
     return tx.objectStore(store_name);
 };
 
-const displayElements = store => {
-    console.log('displayElements');
+/**
+ * @param {*} index
+ * @param {*} [store=DB_STORE_NAME]
+ * @returns
+ */
+const getElements = (index, store) => {
+    return new Promise((resolve, reject) => {
+        console.log('getElements');
 
-    if (typeof store === 'undefined')
-        store = getObjectStore(DB_STORE_NAME, 'readonly');
+        if (typeof store === 'undefined')
+            store = getObjectStore(DB_STORE_NAME, 'readonly');
 
-    const $tbody = $('#quantities table tbody');
-    $tbody.empty();
+        let elements = [];
+        const myIndex = store.index(index);
+        const req = myIndex.openCursor();
+        req.onsuccess = event => {
+            const cursor = event.target.result;
+            if (cursor) {
+                elements = [...elements, cursor.value];
+                cursor.continue();
+            } else {
+                console.log('No more elements');
+                resolve(elements);
+            }
+        };
 
-    let req = store.count();
-    req.onsuccess = event => {
-        console.log(`Total number of elements: ${event.target.result}`);
-    };
-
-    req.onerror = () => {
-        console.error('add error', this.error);
-    };
-
-    let i = 1;
-    const myIndex = store.index('segment');
-    req = myIndex.openCursor();
-    req.onsuccess = event => {
-        const cursor = event.target.result;
-        if (cursor) {
-            const value = cursor.value;
-            const tr = document.createElement('tr');
-            const formworkPrice = Math.round(value.properties[0].area * 10);
-            const concretePrice =
-                Math.round(value.properties[0].volume * 100 * 75) / 100;
-            const totalPrice = formworkPrice + concretePrice;
-            const areaChange = compare(value.properties, 'area');
-            const volumeChange = compare(value.properties, 'volume');
-            tr.innerHTML = `
-                    <th scope="row">${i}</th>
-                    <td>${value.structurecode}</td>
-                    <td>${value.segmentcode}</td>
-                    <td>${value.assemblycode}</td>
-                    <td>${value.properties[0].area} ${areaChange}</td>
-                    <td>${formworkPrice}</td>
-                    <td>${value.material}</td>
-                    <td>${Math.round(value.properties[0].volume * 100) /
-                        100} ${volumeChange}</td>
-                    <td>${concretePrice}</td>
-                    <td>${totalPrice}`;
-
-            $tbody.append(tr);
-
-            cursor.continue();
-
-            i++;
-        } else {
-            // console.log('No more elements');
-        }
-    };
+        req.onerror = err => {
+            reject(err);
+        };
+    });
 };
 
 /**
@@ -146,7 +120,6 @@ const addElements = elements => {
                     throw err;
                 }
                 req.onsuccess = () => {
-                    // console.log('Insertion in DB successful');
                     msg.added++;
                 };
                 req.onerror = event => {
@@ -160,115 +133,84 @@ const addElements = elements => {
     };
 };
 
-const displayDashboard = store => {
-    console.log('displayDashboard');
-
-    if (typeof store === 'undefined')
-        store = getObjectStore(DB_STORE_NAME, 'readonly');
-
-    let req;
-    let segments = [];
-    const myIndex = store.index('part');
-    req = myIndex.openCursor();
-    req.onsuccess = event => {
-        const cursor = event.target.result;
-        if (cursor) {
-            const data = cursor.value;
-            const index = segments.findIndex(
-                obj => obj.name === `${data.segmentcode}-${data.segmentpart}`
-            );
-            if (index === -1) {
-                segments.push({
-                    name: `${data.segmentcode}-${data.segmentpart}`,
-                    totalPrice:
-                        data.properties[0].area * 10 +
-                        data.properties[0].volume * 75
-                });
-                // start++;
-                // end++;
-            } else {
-                segments[index].totalPrice +=
-                    data.properties[0].area * 10 +
-                    data.properties[0].volume * 75;
-            }
-
-            cursor.continue();
-        } else {
-            segments.forEach(segment => {
-                segment.start = Math.floor(Math.random() * 11);
-                do {
-                    segment.end = Math.floor(Math.random() * 11);
-                } while (segment.end < segment.start);
-            });
-            dashboard('#charts', segments);
-        }
-    };
-};
-
 /**
  *
  * @param {Array} segmentNames Array containng the names of the segements containing the elements to be selected
- * @param {*} store
+ * @param {string} store
  */
 const getDbIds = (segmentNames, store) => {
-    console.log('getDbIds...');
-    if (typeof store === 'undefined')
-        store = getObjectStore(DB_STORE_NAME, 'readonly');
+    return new Promise((resolve, reject) => {
+        console.log('getDbIds...');
+        if (typeof store === 'undefined')
+            store = getObjectStore(DB_STORE_NAME, 'readonly');
 
-    let req;
-    let dbIds = [];
-    const myIndex = store.index('part');
-    req = myIndex.openCursor();
-    req.onsuccess = event => {
-        const cursor = event.target.result;
-        if (cursor) {
-            const data = cursor.value;
-            segmentNames.forEach(segmentName => {
-                if (`${data.segmentcode}-${data.segmentpart}` === segmentName) {
-                    dbIds.push(data.dbId);
-                }
-            });
+        let req;
+        let dbIds = [];
+        const myIndex = store.index('part');
+        req = myIndex.openCursor();
+        req.onsuccess = event => {
+            const cursor = event.target.result;
+            if (cursor) {
+                const data = cursor.value;
+                segmentNames.forEach(segmentName => {
+                    if (
+                        `${data.segmentcode}-${data.segmentpart}` ===
+                        segmentName
+                    ) {
+                        dbIds.push(data.dbId);
+                    }
+                });
 
-            cursor.continue();
-        } else {
-            NOP_VIEWER.select(dbIds, Autodesk.Viewing.SelectionMode.REGULAR);
+                cursor.continue();
+            } else {
+                resolve(dbIds);
+                // dbIds.forEach(dbid => {
+                //     NOP_VIEWER.clearThemingColors(NOP_VIEWER.model);
+                //     NOP_VIEWER.impl.visibilityManager.show(dbid, NOP_VIEWER.model);
+                //     NOP_VIEWER.setThemingColor(
+                //         dbid,
+                //         new THREE.Vector4(1, 0, 0, 1),
+                //         NOP_VIEWER.model
+                //     );
+                // });
+                // const overlayName = 'temporary-coloreddddd-overlay';
+                // const material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+                // NOP_VIEWER.impl.createOverlayScene(overlayName, material, material);
+                // dbIds.forEach(dbid => {
+                //     const it = NOP_VIEWER.model.getData().instanceTree;
+                //     it.enumNodeFragments(
+                //         dbid,
+                //         fragId => {
+                //             const renderProxy = NOP_VIEWER.impl.getRenderProxy(
+                //                 NOP_VIEWER.model,
+                //                 fragId
+                //             );
+                //             renderProxy.meshProxy = new THREE.Mesh(
+                //                 renderProxy.geometry,
+                //                 renderProxy.material
+                //             );
+                //             renderProxy.meshProxy.matrix.copy(
+                //                 renderProxy.matrixWorld
+                //             );
+                //             renderProxy.meshProxy.matrixWorldNeedsUpdate = true;
+                //             renderProxy.meshProxy.matrixAutoUpdate = false;
+                //             renderProxy.meshProxy.frustumCulled = false;
+                //             NOP_VIEWER.impl.addOverlay(
+                //                 overlayName,
+                //                 renderProxy.meshProxy
+                //             );
+                //             NOP_VIEWER.impl.invalidate(true);
+                //         },
+                //         false
+                //     );
+                // });
+            }
+        };
 
-            const overlayName = 'temporary-coloreddddd-overlay';
-            const material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-            NOP_VIEWER.impl.createOverlayScene(overlayName, material, material);
-            dbIds.forEach(dbid => {
-                const it = NOP_VIEWER.model.getData().instanceTree;
-
-                it.enumNodeFragments(
-                    dbid,
-                    fragId => {
-                        const renderProxy = NOP_VIEWER.impl.getRenderProxy(
-                            NOP_VIEWER.model,
-                            fragId
-                        );
-
-                        renderProxy.meshProxy = new THREE.Mesh(
-                            renderProxy.geometry,
-                            renderProxy.material
-                        );
-
-                        renderProxy.meshProxy.matrix.copy(
-                            renderProxy.matrixWorld
-                        );
-                        renderProxy.meshProxy.matrixWorldNeedsUpdate = true;
-                        renderProxy.meshProxy.matrixAutoUpdate = false;
-                        renderProxy.meshProxy.frustumCulled = false;
-                        NOP_VIEWER.impl.addOverlay(
-                            overlayName,
-                            renderProxy.meshProxy
-                        );
-                        NOP_VIEWER.impl.invalidate(true);
-                    },
-                    false
-                );
-            });
-        }
-    };
+        req.onerror = err => {
+            reject(err);
+        };
+    });
 };
 
-export { addElements, openDb, displayElements, displayDashboard, getDbIds };
+export { addElements, openDb, getElements, getDbIds };

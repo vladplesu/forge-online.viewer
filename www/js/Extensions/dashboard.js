@@ -1,4 +1,4 @@
-import { getDbIds } from './index.js';
+import { getDbIds } from '../indexedDB/index.js';
 
 const MONTH_NAMES = [
     'Jan',
@@ -14,25 +14,6 @@ const MONTH_NAMES = [
     'Nov',
     'Dec'
 ];
-
-/**
- *
- * @param {Array} arr Array of properties to compare
- * @param {String} prop Name of property to compare
- */
-const compare = (arr, prop) => {
-    let res = '';
-    if (arr.length > 1) {
-        res =
-            arr[0][prop] > arr[1][prop]
-                ? '<span class="badge badge-success">+</span>'
-                : arr[0][prop] < arr[1][prop]
-                    ? '<span class="badge badge-danger">-</span>'
-                    : '';
-    }
-
-    return res;
-};
 
 const barColor = 'orange';
 
@@ -135,13 +116,15 @@ const dashboard = (id, sData) => {
             .nice()
             .range([cFdim.h, 0]);
 
-        const onclick = d => {
+        const onclick = async d => {
             console.log(d.data);
             const month = MONTH_NAMES.findIndex(t => t === d[0]);
             const segmentNames = sData
                 .filter(s => month >= s.start && month <= s.end)
                 .map(s => s.name);
-            getDbIds(segmentNames);
+            const dbIds = await getDbIds(segmentNames);
+            console.log(dbIds);
+            NOP_VIEWER.select(dbIds, Autodesk.Viewing.SelectionMode.REGULAR);
         };
 
         // Create bars for bar chart to contain rectangles and month labels.
@@ -278,9 +261,10 @@ const dashboard = (id, sData) => {
             );
         };
 
-        const onclick = d => {
+        const onclick = async d => {
             console.log(d.data);
-            getDbIds([d.data.segment]);
+            const dbIds = await getDbIds([d.data.segment]);
+            NOP_VIEWER.select(dbIds, Autodesk.Viewing.SelectionMode.REGULAR);
         };
 
         // Draw the pie slices.
@@ -541,4 +525,4 @@ const dashboard = (id, sData) => {
         leg = legend(tP);
 };
 
-export { compare, dashboard };
+export { dashboard };
